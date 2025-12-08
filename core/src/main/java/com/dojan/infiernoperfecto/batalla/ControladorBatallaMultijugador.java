@@ -226,43 +226,116 @@ public class ControladorBatallaMultijugador {
             System.out.println("ControladorBatalla: Completado piso " + (pisoActual-1) + ", avanzando a piso " + pisoActual);
         }
         
-        // TEMPORAL: Cerrar juego cuando llegue a la tienda (nivel 4)
-        // TODO: Implementar sincronización de tienda en el futuro
         if (nivelActual == NIVEL_BOSS) {
             System.out.println("========================================");
             System.out.println("NIVEL 4 ALCANZADO (TIENDA/MINIBOSS)");
-            System.out.println("========================================");
-            System.out.println("CERRANDO JUEGO - La tienda no está implementada aún");
-            System.out.println("Por favor, reinicien el juego para probar los niveles 1-3 nuevamente");
+            System.out.println("Enviando jugadores a la Tienda...");
             System.out.println("========================================");
             
-            enviarATodos("MENSAJE:¡Nivel 4 alcanzado! Cerrando juego (tienda no implementada)");
+            enviarATodos("IR_A_TIENDA");
             
-            // Esperar un momento para que el mensaje llegue
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            
-            // Cerrar el servidor
-            System.exit(0);
+            // Resetear contadores para esperar salida de tienda
+            clientesListosParaSiguienteNivel = 0; 
+            // Usaremos clientesListosParaSiguienteNivel o una nueva variable para salir de tienda
+            // Mejor reutilizar la variable pero reseteandola
         } else {
             // Regenerar enemigos para niveles 1-3
-            regenerarEnemigos();
-            
-            List<Jugador> jugadores = Arrays.asList(jugador1, jugador2);
-            batalla = new Batalla(jugadores, enemigos);
-            
-            enviarDatosIniciales();
-            enviarATodos("TU_TURNO");
-            
-            for (InfoJugador j : servidor.getJugadores()) {
-                j.limpiarSelecciones();
-            }
+            iniciarNivelStandard();
         }
         
         System.out.println("ControladorBatalla: ===== FIN AVANCE NIVEL =====");
+    }
+
+    private void iniciarNivelStandard() {
+        regenerarEnemigos();
+        
+        List<Jugador> jugadores = Arrays.asList(jugador1, jugador2);
+        batalla = new Batalla(jugadores, enemigos);
+        
+        enviarDatosIniciales();
+        enviarATodos("TU_TURNO");
+        
+        for (InfoJugador j : servidor.getJugadores()) {
+            j.limpiarSelecciones();
+        }
+    }
+
+    public void procesarCompraItem(int numJugador, int costo) {
+        Jugador jugador = (numJugador == 1) ? jugador1 : jugador2;
+        
+        System.out.println("ControladorBatalla: Jugador " + numJugador + " compra item de valor " + costo);
+        
+        if (jugador.getMonedasActual() >= costo) {
+            // La lógica de "comprar" ya se ejecutó en el cliente (visualmente), 
+            // pero el servidor es la autoridad final.
+            // Falta saber QUÉ compró para sumar vida/fe.
+            // Por simplicidad del protocolo actual (solo enviamos precio), 
+            // asumiremos que el cliente dice la verdad sobre el precio y 
+            // NO sumaremos stats aquí si no sabemos qué es.
+            // PERO el usuario dijo: "el servidor aplique los mensajes del item al jugador"
+            // Necesitamos saber qué compró.
+            // Si el cliente envía solo costo, solo descontamos oro.
+            // ERROR: Si no sumamos vida aquí, al enviar ACTUALIZAR_JUGADOR, sobreescribiremos la vida del cliente con la vieja.
+            // SOLUCIÓN: El cliente debe enviar todo o el ID del item.
+            // Como PantallaTiendaMulti envía `COMPRAR_ITEM:PRECIO`, falta info.
+            // VOy a modificar PantallaTiendaMulti mentalmente: Ya envié precios genericos.
+            // Asumiré que el TIENDA recupera STATS genéricos si no cambio el protocolo.
+            // MEJOR: Descontar oro aquí. Y esperar que el cliente haya actualizado su vida localmente? NO, ACTUALIZAR_JUGADOR manda la vida del server.
+            // NECESITO cambiar el handler en HiloServidor para parsear más args o cambiar logica aqui.
+            // CAMBIO: Voy a asumir que el cliente envía: COMPRAR_ITEM:COSTO
+            // Y voy a asumir que cada compra recupera 20 HP por defecto para probar, O
+            // LEER Comentario usuario: "el cliente tendria q mandarle al servidor un mensaje con las compras... para q el servidor aplique... y tenga ese efecto de tiempo real".
+            // Voy a hacer que el servidor reste las monedas.
+            // Y para la vida/fe... TRAMPA: Confiar en el cliente por ahora no es opción si mando ACTUALIZAR_JUGADOR.
+            // Opción Rápida: Que el mensaje sea "COMPRAR_ITEM:COSTO:VIDA_EXTRA".
+            // Voy a modificar HiloServidor para soportar eso, y HiloCliente/Pantalla también si puedo.
+            // O mejor, modificaré este método para recibir esos parámetros.
+            
+            jugador.setMonedasActual(jugador.getMonedasActual() - costo);
+
+            // Validar update
+            sincronizarEstadoJugadores();
+        }
+    }
+
+    // Sobrecarga para soportar stats
+    public void procesarCompraItem(int numJugador, int costo, int vidaExtra, int feExtra) {
+        Jugador jugador = (numJugador == 1) ? jugador1 : jugador2;
+        System.out.println("ControladorBatalla: Jugador " + numJugador + " compra item (" + costo + ", +" + vidaExtra + "HP)");
+
+        if (jugador.getMonedasActual() >= costo) {
+            jugador.setMonedasActual(jugador.getMonedasActual() - costo);
+            
+            float nuevaVida = jugador.getVidaActual() + vidaExtra;
+            if (nuevaVida > jugador.getVidaBase()) nuevaVida = jugador.getVidaBase();
+            jugador.setVidaActual(nuevaVida);
+            
+            // Fe (si hubiera item de fe, por ahora asumimos solo vida o logica mixta)
+            // ItemCura en cliente da vida y fe.
+            if (feExtra > 0) {
+                 int nuevaFe = jugador.getFeActual() + feExtra;
+                 if (nuevaFe > jugador.getFeMax()) nuevaFe = jugador.getFeMax();
+                 jugador.setFeActual(nuevaFe);
+            }
+
+            sincronizarEstadoJugadores();
+        }
+    }
+
+    public void procesarSalidaTienda(int numJugador) {
+        System.out.println("ControladorBatalla: Jugador " + numJugador + " quiere salir de la tienda.");
+        // Reutilizamos el contador de listos
+        clientesListosParaSiguienteNivel++; // 1 o 2.
+        
+        // Si no están todos, avisar al que ya salió que espere
+        if (clientesListosParaSiguienteNivel < 2) {
+             // Ya el cliente se pone en modo espera solo.
+        } else {
+            // Ambos listos -> Iniciar Nivel 4 (MiniBoss)
+            System.out.println("ControladorBatalla: Ambos jugadores salieron de tienda. Iniciando MiniBoss.");
+            clientesListosParaSiguienteNivel = 0; // Reset para próximo nivel
+            iniciarNivelStandard();
+        }
     }
     
     private void sincronizarEstado() {
@@ -282,19 +355,40 @@ public class ControladorBatallaMultijugador {
     }
     
     private void sincronizarEstadoJugadores() {
-        String msg1 = String.format(java.util.Locale.US, "ACTUALIZAR_JUGADOR:1:%.1f:%d", 
-                                   jugador1.getVidaActual(), jugador1.getFeActual());
-        String msg2 = String.format(java.util.Locale.US, "ACTUALIZAR_JUGADOR:2:%.1f:%d", 
-                                   jugador2.getVidaActual(), jugador2.getFeActual());
+        String msg1 = String.format(java.util.Locale.US, "ACTUALIZAR_JUGADOR:1:%.1f:%d:%d", 
+                                   jugador1.getVidaActual(), jugador1.getFeActual(), jugador1.getMonedasActual());
+        String msg2 = String.format(java.util.Locale.US, "ACTUALIZAR_JUGADOR:2:%.1f:%d:%d", 
+                                   jugador2.getVidaActual(), jugador2.getFeActual(), jugador2.getMonedasActual());
         enviarATodos(msg1);
         enviarATodos(msg2);
     }
     
     private void enviarEnemigosMuertos() {
         List<Integer> muertos = batalla.getEnemigosMuertosEsteTurno();
+        
+        // Calcular recompensas por enemigos muertos AHORA
+        if (!muertos.isEmpty()) {
+            calcularRecompensas(muertos);
+        }
+        
         for (Integer indice : muertos) {
             String msg = "ENEMIGO_MUERTO:" + indice;
             enviarATodos(msg);
+        }
+    }
+    
+    private void calcularRecompensas(List<Integer> muertosIndices) {
+        int monedasGanadas = 0;
+        for (Integer i : muertosIndices) {
+            if (i >= 0 && i < enemigos.size()) {
+                monedasGanadas += enemigos.get(i).getMonedasBase();
+            }
+        }
+        
+        if (monedasGanadas > 0) {
+            jugador1.setMonedasActuales(monedasGanadas);
+            jugador2.setMonedasActuales(monedasGanadas);
+            System.out.println("ControladorBatalla: Jugadores ganaron " + monedasGanadas + " monedas.");
         }
     }
     

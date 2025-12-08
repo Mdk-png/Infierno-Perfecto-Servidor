@@ -220,4 +220,20 @@ public abstract class Personaje {
     public void setMonedasActuales(int monedas) {
         this.monedasActual += monedas;
     }
+
+    public void setMonedasActual(int monedas) {
+        this.monedasActual = monedas;
+    }
+
+    public void setVidaActual(float vida) {
+        this.vidaActual = vida;
+    }
+
+    public void setFeActual(int fe) {
+        this.feActual = fe;
+    }
+
+    public int getFeMax() {
+        return feBase; // Asumiendo que feBase es el máximo
+    }
 }

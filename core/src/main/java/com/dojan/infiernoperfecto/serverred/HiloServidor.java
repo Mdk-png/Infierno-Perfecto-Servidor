@@ -181,6 +181,36 @@ public class HiloServidor extends Thread {
                     controladorBatalla.clienteConfirmoLog(jugador);
                 }
             }
+        
+        } else if (msg.startsWith("COMPRAR_ITEM:")) {
+            // COMPRAR_ITEM:COSTO  o  COMPRAR_ITEM:COSTO:VIDA:FE
+            if (controladorBatalla != null) {
+                InfoJugador jugador = buscarJugador(clienteIP, clientePuerto);
+                if (jugador != null) {
+                    try {
+                        String[] partes = msg.split(":");
+                        int costo = Integer.parseInt(partes[1]);
+                        
+                        if (partes.length > 3) { // COSTO:VIDA:FE
+                           controladorBatalla.procesarCompraItem(jugador.getNumeroJugador(), costo, 
+                                                               Integer.parseInt(partes[2]), 
+                                                               Integer.parseInt(partes[3])); 
+                        } else {
+                           controladorBatalla.procesarCompraItem(jugador.getNumeroJugador(), costo);
+                        }
+                    } catch(Exception e) {
+                        System.out.println("Error procesando compra: " + e.getMessage());
+                    }
+                }
+            }
+            
+        } else if (msg.equals("SALIR_TIENDA")) {
+            if (controladorBatalla != null) {
+                 InfoJugador jugador = buscarJugador(clienteIP, clientePuerto);
+                 if (jugador != null) {
+                     controladorBatalla.procesarSalidaTienda(jugador.getNumeroJugador());
+                 }
+            }
         }
     }
 

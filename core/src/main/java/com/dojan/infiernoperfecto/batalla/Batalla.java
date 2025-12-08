@@ -192,6 +192,7 @@ public class Batalla {
         // Elegir jugador aleatorio de los vivos
         int indiceAleatorio = Random.generarEntero(jugadoresVivos.size());
         int jugadorObjetivo = jugadoresVivos.get(indiceAleatorio);
+        System.out.println("DEBUG: Enemigo " + enemigo.getNombre() + " ataca a Jugador " + (jugadorObjetivo+1) + " (De " + jugadoresVivos.size() + " vivos)");
         Jugador jugador = jugadores.get(jugadorObjetivo);
         
         int ataqueEnemigo = Random.generarEntero(enemigo.getAtaques().size());
