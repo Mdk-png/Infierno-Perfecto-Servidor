@@ -109,7 +109,7 @@ public class Batalla {
      * Procesa un turno en modo multijugador (2 jugadores).
      * En turno 0: ambos jugadores atacan simultáneamente.
      * En turnos 1+: cada enemigo ataca a un jugador aleatorio.
-     * 
+     *
      * @param j1EnemigoIdx Índice del enemigo que ataca jugador 1
      * @param j1AtaqueIdx Índice del ataque que usa jugador 1
      * @param j2EnemigoIdx Índice del enemigo que ataca jugador 2
@@ -122,7 +122,7 @@ public class Batalla {
     ) {
         enemigosMuertosEsteturno.clear();
         logCombate = "";
-        
+
         if (turno == 0) {
             // Turno de AMBOS jugadores simultáneamente
             turnoJugadorMulti(jugadores.get(0), j1EnemigoIdx, j1AtaqueIdx, 1);
@@ -137,15 +137,15 @@ public class Batalla {
                 }
             }
         }
-        
+
         turno++;
-        
+
         // Cuando termina la ronda de enemigos, volver a turno 0
         if (turno > enemigos.size()) {
             turno = 0;
             return batallaTerminadaMulti();
         }
-        
+
         return false;
     }
 
@@ -154,17 +154,20 @@ public class Batalla {
      */
     private void turnoJugadorMulti(Jugador jugador, int opcE, int opcA, int numJugador) {
         Enemigo objetivo = enemigos.get(opcE);
-        
+
+        // ejecutar ataque
         ResultadoAtaque resultado = jugador.atacar(objetivo, opcA);
         float danioReal = resultado.getDanio();
-        
-        logCombate += "Jugador " + numJugador + " atacó a " + objetivo.getNombre() + 
+
+        // Registrar en el log
+        logCombate += "Jugador " + numJugador + " atacó a " + objetivo.getNombre() +
                       " e hizo " + danioReal + " de daño.\n";
-        
+
         if (resultado.getEfectoMensaje() != null && !resultado.getEfectoMensaje().isEmpty()) {
             logCombate += resultado.getEfectoMensaje() + "\n";
         }
-        
+
+        // si murio guarda el indice
         if (!objetivo.sigueVivo()) {
             System.out.println("Murió el objetivo: " + objetivo.getNombre());
             enemigosMuertosEsteturno.add(opcE);
@@ -183,36 +186,36 @@ public class Batalla {
                 jugadoresVivos.add(i);
             }
         }
-        
-        // Si no hay jugadores vivos, no atacar
+
+        // Si no hasy jugadores vivo, no atacar
         if (jugadoresVivos.isEmpty()) {
             return;
         }
-        
+
         // Elegir jugador aleatorio de los vivos
         int indiceAleatorio = Random.generarEntero(jugadoresVivos.size());
         int jugadorObjetivo = jugadoresVivos.get(indiceAleatorio);
         System.out.println("DEBUG: Enemigo " + enemigo.getNombre() + " ataca a Jugador " + (jugadorObjetivo+1) + " (De " + jugadoresVivos.size() + " vivos)");
         Jugador jugador = jugadores.get(jugadorObjetivo);
-        
+
         int ataqueEnemigo = Random.generarEntero(enemigo.getAtaques().size());
         ResultadoAtaque resultado = enemigo.atacar(jugador, ataqueEnemigo);
         float danioReal = resultado.getDanio();
-        
+
         String nombreAtaque = "";
-        if (enemigo.getAtaques() != null && !enemigo.getAtaques().isEmpty() && 
+        if (enemigo.getAtaques() != null && !enemigo.getAtaques().isEmpty() &&
             ataqueEnemigo >= 0 && ataqueEnemigo < enemigo.getAtaques().size()) {
             nombreAtaque = enemigo.getAtaques().get(ataqueEnemigo).getNombre();
         }
-        
+
         if (!nombreAtaque.isEmpty()) {
-            logCombate += enemigo.getNombre() + " usó " + nombreAtaque + 
+            logCombate += enemigo.getNombre() + " usó " + nombreAtaque +
                           " e hizo " + danioReal + " de daño a Jugador " + (jugadorObjetivo + 1) + ".\n";
         } else {
-            logCombate += enemigo.getNombre() + " hizo " + danioReal + 
+            logCombate += enemigo.getNombre() + " hizo " + danioReal +
                           " de daño a Jugador " + (jugadorObjetivo + 1) + ".\n";
         }
-        
+
         if (resultado.getEfectoMensaje() != null && !resultado.getEfectoMensaje().isEmpty()) {
             logCombate += resultado.getEfectoMensaje() + "\n";
         }

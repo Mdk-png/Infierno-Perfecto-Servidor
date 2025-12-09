@@ -26,7 +26,7 @@ public class HiloServidor extends Thread {
     private static final int PUERTO_SERVIDOR = 6666;
     private static final int PUERTO_CLIENTE = 6667;
     private boolean partidaIniciada = false;
-    
+
     // ============================================================
     // ATRIBUTOS PARA MODO MULTIJUGADOR - FASE 2.3 y 3
     // ============================================================
@@ -36,13 +36,13 @@ public class HiloServidor extends Thread {
     public HiloServidor() {
         this.setDaemon(true);
         try {
-            conexion = new DatagramSocket(PUERTO_SERVIDOR);
-            conexion.setBroadcast(true);
+            conexion = new DatagramSocket(PUERTO_SERVIDOR); // Puerto fijo para el servidor
+            conexion.setBroadcast(true); // Habilitar broadcast
             conexion.setSoTimeout(1000);
             System.out.println("Servidor: Iniciado en puerto " + PUERTO_SERVIDOR);
             System.out.println("Servidor: Esperando conexiones...");
         } catch (SocketException e) {
-            e.printStackTrace();
+            e.printStackTrace(); // Error crítico al iniciar el servidor
         }
     }
 
@@ -50,7 +50,7 @@ public class HiloServidor extends Thread {
         try {
             byte[] mensaje = msg.getBytes();
             DatagramPacket dp = new DatagramPacket(mensaje, mensaje.length, ip, puerto);
-            conexion.send(dp);
+            conexion.send(dp); // Enviar paquete a cliente específico
             System.out.println("Servidor: Enviado UNICAST '" + msg + "' a " + ip.getHostAddress() + ":" + puerto);
         } catch (IOException e) {
             e.printStackTrace();
@@ -62,7 +62,7 @@ public class HiloServidor extends Thread {
             byte[] mensaje = msg.getBytes();
             InetAddress broadcast = InetAddress.getByName("255.255.255.255");
             DatagramPacket dp = new DatagramPacket(mensaje, mensaje.length, broadcast, PUERTO_CLIENTE);
-            conexion.send(dp);
+            conexion.send(dp); // Enviar paquete de broadcast a todos los clientes
             System.out.println("Servidor: 📡 BROADCAST '" + msg + "' enviado a todos");
         } catch (IOException e) {
             e.printStackTrace();
@@ -73,11 +73,11 @@ public class HiloServidor extends Thread {
         System.out.println("Servidor: Enviando a todos los clientes: '" + msg + "'");
         // enviarBroadcast(msg); // REMOVIDO: Causa duplicidad. Usamos Unicast directo.
         for (DireccionRed cliente : clientesConectados) {
-            enviarUnicast(msg, cliente.getIp(), cliente.getPuerto());
+            enviarUnicast(msg, cliente.getIp(), cliente.getPuerto()); // Enviar a cada cliente individualmente
         }
     }
 
-
+    // envia a cliente restante (usado en desconexión)
     private void enviarAlOtroCliente(String msg, InetAddress ipExcluir, int puertoExcluir) {
         System.out.println("Servidor: Enviando al otro cliente: '" + msg + "'");
         System.out.println("Servidor: Cliente a EXCLUIR: " + ipExcluir.getHostAddress() + ":" + puertoExcluir);
@@ -99,7 +99,7 @@ public class HiloServidor extends Thread {
         }
     }
 
-    private long ultimoHeartbeat = System.currentTimeMillis();
+    private long ultimoHeartbeat = System.currentTimeMillis(); // para control de heartbeat
     private static final long INTERVALO_HEARTBEAT = 5000; // originalmente estaba en 3000; lo subo a 5000 para mayor tolerancia
 
     @Override
@@ -109,8 +109,8 @@ public class HiloServidor extends Thread {
                 byte[] buffer = new byte[1024];
                 DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
                 try {
-                    conexion.receive(dp);
-                    procesarMensaje(dp);
+                    conexion.receive(dp); // Esperar mensaje entrante
+                    procesarMensaje(dp); // Procesar el mensaje recibido
                 } catch (SocketTimeoutException e) {
                     // Timeout normal, continuar el loop
                 } catch (IOException e) {
@@ -118,6 +118,8 @@ public class HiloServidor extends Thread {
                 }
 
                 // Enviar heartbeat periódico
+                // funcion que cada cierto tiempo envia un mensaje HEARTBEAT a todos los clientes conectados
+                // si no se recibe respuesta, el cliente puede asumir que el servidor está caído
                 if (System.currentTimeMillis() - ultimoHeartbeat > INTERVALO_HEARTBEAT) {
                     if (clientesConectados.size() > 0) {
                         enviarATodos("HEARTBEAT");
@@ -130,7 +132,7 @@ public class HiloServidor extends Thread {
             e.printStackTrace();
         } finally {
             System.out.println("Servidor: HiloServidor detenido");
-            cerrarConexion();
+            cerrarConexion(); // Asegurar cierre de conexión al salir del run
         }
     }
 
@@ -146,42 +148,42 @@ public class HiloServidor extends Thread {
 
         } else if (msg.equals("Desconexion")) {
             manejarDesconexion(clienteIP, clientePuerto);
-        
+
         // ============================================================
         // MENSAJES DE BATALLA MULTIJUGADOR - FASE 2.3
         // ============================================================
         } else if (msg.startsWith("SELECCIONAR_ENEMIGO:")) {
             try {
                 int indiceEnemigo = Integer.parseInt(msg.split(":")[1]);
-                registrarSeleccionEnemigo(clienteIP, clientePuerto, indiceEnemigo);
+                registrarSeleccionEnemigo(clienteIP, clientePuerto, indiceEnemigo); // Registrar selección de enemigo
             } catch (Exception e) {
                 System.out.println("Servidor: Error procesando SELECCIONAR_ENEMIGO: " + e.getMessage());
             }
-        
+
         } else if (msg.startsWith("SELECCIONAR_ATAQUE:")) {
             try {
                 int indiceAtaque = Integer.parseInt(msg.split(":")[1]);
-                registrarSeleccionAtaque(clienteIP, clientePuerto, indiceAtaque);
+                registrarSeleccionAtaque(clienteIP, clientePuerto, indiceAtaque); // Registrar selección de ataque
             } catch (Exception e) {
                 System.out.println("Servidor: Error procesando SELECCIONAR_ATAQUE: " + e.getMessage());
             }
         } else if (msg.equals("LISTO_SIGUIENTE_NIVEL")) {
             if (controladorBatalla != null) {
-                controladorBatalla.clienteListoParaSiguienteNivel();
+                controladorBatalla.clienteListoParaSiguienteNivel(); // Notificar que el cliente está listo para el siguiente nivel
             }
         } else if (msg.equals("LISTO_RESULTADOS")) {
             if (controladorBatalla != null) {
-                controladorBatalla.clienteListoParaResultados();
+                controladorBatalla.clienteListoParaResultados(); // Notificar que el cliente está listo para ver resultados
             }
         } else if (msg.equals("CONFIRMAR_LOG")) {
             if (controladorBatalla != null) {
                 // Buscar el jugador que envió el mensaje
                 InfoJugador jugador = buscarJugador(clienteIP, clientePuerto);
                 if (jugador != null) {
-                    controladorBatalla.clienteConfirmoLog(jugador);
+                    controladorBatalla.clienteConfirmoLog(jugador); // Notificar que el cliente confirmó el log
                 }
             }
-        
+
         } else if (msg.startsWith("COMPRAR_ITEM:")) {
             // COMPRAR_ITEM:COSTO  o  COMPRAR_ITEM:COSTO:VIDA:FE
             if (controladorBatalla != null) {
@@ -190,11 +192,11 @@ public class HiloServidor extends Thread {
                     try {
                         String[] partes = msg.split(":");
                         int costo = Integer.parseInt(partes[1]);
-                        
+
                         if (partes.length > 3) { // COSTO:VIDA:FE
-                           controladorBatalla.procesarCompraItem(jugador.getNumeroJugador(), costo, 
-                                                               Integer.parseInt(partes[2]), 
-                                                               Integer.parseInt(partes[3])); 
+                           controladorBatalla.procesarCompraItem(jugador.getNumeroJugador(), costo,
+                                                               Integer.parseInt(partes[2]),
+                                                               Integer.parseInt(partes[3]));
                         } else {
                            controladorBatalla.procesarCompraItem(jugador.getNumeroJugador(), costo);
                         }
@@ -203,7 +205,7 @@ public class HiloServidor extends Thread {
                     }
                 }
             }
-            
+
         } else if (msg.equals("SALIR_TIENDA")) {
             if (controladorBatalla != null) {
                  InfoJugador jugador = buscarJugador(clienteIP, clientePuerto);
@@ -215,6 +217,7 @@ public class HiloServidor extends Thread {
     }
 
     private void manejarConexion(InetAddress clienteIP, int clientePuerto) {
+        // Verificar si el cliente ya está conectado
         boolean yaConectado = false;
         for (DireccionRed cliente : clientesConectados) {
             if (cliente.getIp().equals(clienteIP) && cliente.getPuerto() == clientePuerto) {
@@ -223,26 +226,32 @@ public class HiloServidor extends Thread {
             }
         }
 
+        // Si no está conectado y hay espacio, agregarlo
+
         if (!yaConectado && clientesConectados.size() < MAX_CLIENTES) {
             clientesConectados.add(new DireccionRed(clienteIP, clientePuerto));
-            
-            // FASE 2.3: Crear InfoJugador y asignar número
+
+            //  Crear InfoJugador con número asignado
             int numJugador = clientesConectados.size();
             InfoJugador info = new InfoJugador(clienteIP, clientePuerto, numJugador);
             jugadores.add(info);
-            
+
+            // notificar al cliente que se conectó exitosamente
             enviarUnicast("OK", clienteIP, clientePuerto);
             enviarUnicast("ASIGNAR_JUGADOR:" + numJugador, clienteIP, clientePuerto); // Enviar asignación
-            
+
+            // notificar a todos los clientes sobre el cliente conectado
             System.out.println("Servidor: ✅ Cliente conectado. Total: " + clientesConectados.size() + "/" + MAX_CLIENTES);
             enviarATodos("ESPERANDO:" + clientesConectados.size());
 
+            // si hay 2 jugadores iniciar partida
             if (clientesConectados.size() == MAX_CLIENTES) {
                 System.out.println("Servidor: ========================================");
                 System.out.println("Servidor: ¡¡¡INICIANDO PARTIDA CON 2 JUGADORES!!!");
                 System.out.println("Servidor: ========================================");
                 partidaIniciada = true; // ✅ Marcar que la partida empezó
 
+                // se envie el mensaje INICIAR varias veces para asegurar recepción
                 for (int i = 0; i < 5; i++) {
                     enviarATodos("INICIAR");
                     try {
@@ -251,8 +260,8 @@ public class HiloServidor extends Thread {
                         e.printStackTrace();
                     }
                 }
-                
-                // FASE 5.1: Auto-iniciar batalla multijugador
+
+                // iniciar batalla multijugador
                 iniciarBatallaMultijugador();
             }
         } else if (yaConectado) {
@@ -298,13 +307,13 @@ public class HiloServidor extends Thread {
             } else {
                 // Si no había iniciado la partida, solo eliminar el cliente normal
                 clientesConectados.remove(clienteAEliminar);
-                
+
                 // Remover también de la lista de InfoJugador
                 InfoJugador infoToRemove = buscarJugador(clienteIP, clientePuerto);
                 if (infoToRemove != null) {
                     jugadores.remove(infoToRemove);
                 }
-                
+
                 System.out.println("Servidor: ❌ Cliente desconectado. Total: " + clientesConectados.size() + "/" + MAX_CLIENTES);
 
                 // Confirmar desconexión al cliente que se va
@@ -346,62 +355,62 @@ public class HiloServidor extends Thread {
         }
         System.out.println("Servidor: Socket cerrado");
     }
-    
+
     // ============================================================
     // MÉTODOS PARA MODO MULTIJUGADOR - FASE 2.3
     // ============================================================
-    
+
     /**
      * Registra la selección de enemigo de un jugador
      */
     private void registrarSeleccionEnemigo(InetAddress ip, int puerto, int indiceEnemigo) {
         InfoJugador jugador = buscarJugador(ip, puerto);
         if (jugador != null) {
-            jugador.setEnemigoSeleccionado(indiceEnemigo);
-            System.out.println("Servidor: Jugador " + jugador.getNumeroJugador() + 
+            jugador.setEnemigoSeleccionado(indiceEnemigo); // Registrar selección de enemigo
+            System.out.println("Servidor: Jugador " + jugador.getNumeroJugador() +
                              " seleccionó enemigo " + indiceEnemigo);
-            
+
             // Verificar si ambos jugadores completaron su selección
             verificarSeleccionesCompletas();
         }
     }
-    
+
     /**
      * Registra la selección de ataque de un jugador
      */
     private void registrarSeleccionAtaque(InetAddress ip, int puerto, int indiceAtaque) {
         InfoJugador jugador = buscarJugador(ip, puerto);
         if (jugador != null) {
-            jugador.setAtaqueSeleccionado(indiceAtaque);
-            System.out.println("Servidor: Jugador " + jugador.getNumeroJugador() + 
+            jugador.setAtaqueSeleccionado(indiceAtaque); // Registrar selección de ataque
+            System.out.println("Servidor: Jugador " + jugador.getNumeroJugador() +
                              " seleccionó ataque " + indiceAtaque);
-            
+
             // Si este jugador completó su selección, notificarle que espere
             if (jugador.tieneSeleccionCompleta()) {
                 enviarUnicast("ESPERANDO_OTRO_JUGADOR", ip, puerto);
             }
-            
+
             // Verificar si ambos jugadores completaron su selección
             verificarSeleccionesCompletas();
         }
     }
-    
+
     /**
      * Verifica si ambos jugadores completaron sus selecciones
      * Si sí, aquí se ejecutaría el turno (Fase 3)
      */
     private void verificarSeleccionesCompletas() {
         if (jugadores.size() == 2) {
-            boolean ambosListos = jugadores.get(0).tieneSeleccionCompleta() && 
+            boolean ambosListos = jugadores.get(0).tieneSeleccionCompleta() &&
                                  jugadores.get(1).tieneSeleccionCompleta();
-            
+
             if (ambosListos) {
                 System.out.println("Servidor: ¡Ambos jugadores listos! Ejecutando turno...");
-                
+
                 if (controladorBatalla != null) {
                     InfoJugador j1 = jugadores.get(0);
                     InfoJugador j2 = jugadores.get(1);
-                    
+
                     controladorBatalla.ejecutarTurnoJugadores(
                         j1.getEnemigoSeleccionado(), j1.getAtaqueSeleccionado(),
                         j2.getEnemigoSeleccionado(), j2.getAtaqueSeleccionado()
@@ -410,45 +419,45 @@ public class HiloServidor extends Thread {
             }
         }
     }
-    
+
     /**
      * Busca un jugador por IP y puerto
      */
     private InfoJugador buscarJugador(InetAddress ip, int puerto) {
         for (InfoJugador jugador : jugadores) {
-            if (jugador.getDireccion().getIp().equals(ip) && 
+            if (jugador.getDireccion().getIp().equals(ip) &&
                 jugador.getDireccion().getPuerto() == puerto) {
                 return jugador;
             }
         }
         return null;
     }
-    
+
     /**
      * Getter para la lista de jugadores (usado por ControladorBatallaMultijugador en Fase 3)
      */
     public List<InfoJugador> getJugadores() {
         return jugadores;
     }
-    
+
     /**
      * Establece el controlador de batalla (Fase 3)
      */
     public void setControladorBatalla(ControladorBatallaMultijugador controlador) {
         this.controladorBatalla = controlador;
     }
-    
+
     /**
      * Obtiene el controlador de batalla (Fase 3)
      */
     public ControladorBatallaMultijugador getControladorBatalla() {
         return controladorBatalla;
     }
-    
+
     // ============================================================
     // INICIALIZACIÓN DE BATALLA MULTIJUGADOR - FASE 5.1
     // ============================================================
-    
+
     /**
      * Inicializa automáticamente la batalla multijugador cuando se conectan 2 jugadores
      */
@@ -456,17 +465,17 @@ public class HiloServidor extends Thread {
     System.out.println("Servidor: ========================================");
     System.out.println("Servidor: INICIALIZANDO BATALLA MULTIJUGADOR");
     System.out.println("Servidor: ========================================");
-    
+
     // Crear controlador con piso y nivel inicial
     controladorBatalla = new ControladorBatallaMultijugador(this, 1, 1);
-    
-    // Crear jugadores
+
+    // Crear jugadores con personajes básicos (Peleador)
     Jugador j1 = new Jugador("Jugador1", new com.dojan.infiernoperfecto.entidades.clases.Peleador());
     Jugador j2 = new Jugador("Jugador2", new com.dojan.infiernoperfecto.entidades.clases.Peleador());
-    
+
     // Iniciar batalla
     controladorBatalla.iniciarBatalla(j1, j2);
-    
+
     System.out.println("Servidor: ✓ Batalla iniciada exitosamente");
 }
 }

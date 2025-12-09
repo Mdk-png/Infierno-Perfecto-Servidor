@@ -12,8 +12,8 @@ public class ServidorMain {
         System.out.println("=================================");
         System.out.println("Iniciando servidor en puerto 6666...");
 
-        HiloServidor servidor = new HiloServidor();
-        servidor.start();
+        HiloServidor servidor = new HiloServidor(); // crea el hilo
+        servidor.start(); // inicia el hilo
 
         System.out.println("Servidor iniciado correctamente.");
         System.out.println("Esperando conexiones de clientes...");
@@ -24,17 +24,17 @@ public class ServidorMain {
             servidor.join(); // Espera a que el hilo termine
         } catch (InterruptedException e) {
             System.out.println("Servidor interrumpido.");
-            servidor.detener();
+            servidor.detener(); // Detener el servidor si se interrumpe
         } finally {
             // ✅ Garantizar que el servidor se detiene correctamente
             System.out.println("Deteniendo servidor...");
-            servidor.detener();
+            servidor.detener(); // Detener el servidor
             try {
                 servidor.join(2000);
-                System.out.println("Servidor detenido correctamente.");
+                System.out.println("Servidor detenido correctamente."); // Confirmación de detención
             } catch (InterruptedException e) {
                 System.err.println("Forzando cierre del servidor...");
-                Thread.currentThread().interrupt();
+                Thread.currentThread().interrupt(); // Restaurar el estado de interrupción
             }
         }
     }
