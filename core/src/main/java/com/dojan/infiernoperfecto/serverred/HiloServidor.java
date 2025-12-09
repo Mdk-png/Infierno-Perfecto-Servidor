@@ -71,7 +71,7 @@ public class HiloServidor extends Thread {
 
     public void enviarATodos(String msg) {
         System.out.println("Servidor: Enviando a todos los clientes: '" + msg + "'");
-        enviarBroadcast(msg);
+        // enviarBroadcast(msg); // REMOVIDO: Causa duplicidad. Usamos Unicast directo.
         for (DireccionRed cliente : clientesConectados) {
             enviarUnicast(msg, cliente.getIp(), cliente.getPuerto());
         }

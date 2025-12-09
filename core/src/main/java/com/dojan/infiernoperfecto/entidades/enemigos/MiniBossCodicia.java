@@ -5,6 +5,6 @@ import com.dojan.infiernoperfecto.entidades.Enemigo;
 
 public class MiniBossCodicia extends Enemigo {
     public MiniBossCodicia() {
-        super("Glormiga", 340, 60, 65, AtaquesMiniBoss.ataquesBasicos());
+        super("Hormigagula", 340, 60, 65, AtaquesMiniBoss.ataquesBasicos());
     }
 }

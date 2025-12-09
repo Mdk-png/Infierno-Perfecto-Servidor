@@ -61,11 +61,25 @@ public class ControladorBatallaMultijugador {
     
     private void regenerarEnemigos() {
         enemigos.clear();
+
+        if (pisoActual == 5) {
+            // PISO 5: TRAICIÓN (SOLO BOSS)
+            enemigos.add(new BossFinal());
+            System.out.println("¡BOSS FINAL (PISO 5) HA APARECIDO!");
+            return;
+        }
         
         if (nivelActual == NIVEL_BOSS) {
-            // MINIBOSS (igual que modo un jugador)
-            Enemigo miniboss = new MiniBossLimbo();
-            enemigos.add(miniboss);
+            // MINIBOSS (Pisos 1-4)
+            Enemigo miniboss = null;
+            switch(pisoActual) {
+                case 1: miniboss = new MiniBossLimbo(); break;
+                case 2: miniboss = new MiniBossFraude(); break;
+                case 3: miniboss = new MiniBossCodicia(); break;
+                case 4: miniboss = new MiniBossLujuria(); break;
+                default: miniboss = new MiniBossLimbo(); break;
+            }
+            if (miniboss != null) enemigos.add(miniboss);
             System.out.println("¡MINIBOSS DEL PISO " + pisoActual + " HA APARECIDO!");
         } else {
             // Niveles 1-3: Enemigos aleatorios (1-3 enemigos)
@@ -74,21 +88,40 @@ public class ControladorBatallaMultijugador {
             for (int i = 0; i < cantEnemigos; i++) {
                 int tipoEnemigo = Random.generarEntero(2);
                 
-                Enemigo enemigo;
-                if (tipoEnemigo == 1) {
-                    enemigo = new EnemigoLimbo1();
-                } else {
-                    enemigo = new EnemigoLimbo2();
+                Enemigo enemigo = null;
+                switch(pisoActual) {
+                    case 1: 
+                        enemigo = (tipoEnemigo == 1) ? new EnemigoLimbo1() : new EnemigoLimbo2(); 
+                        break;
+                    case 2: 
+                        enemigo = (tipoEnemigo == 1) ? new EnemigoFraude1() : new EnemigoFraude2(); 
+                        break;
+                    case 3: 
+                        enemigo = (tipoEnemigo == 1) ? new EnemigoCodicia1() : new EnemigoCodicia2(); 
+                        break;
+                    case 4: 
+                        enemigo = (tipoEnemigo == 1) ? new EnemigoLujuria1() : new EnemigoLujuria2(); 
+                        break;
+                    case 5:
+                        // Boss Final - Solo uno
+                        if (i == 0) enemigo = new BossFinal();
+                        else enemigo = null; // Evitar generar más de uno si por error se pidieron más
+                        break;
+                    default: 
+                         enemigo = (tipoEnemigo == 1) ? new EnemigoLimbo1() : new EnemigoLimbo2();
+                         break;
                 }
-                enemigos.add(enemigo);
+                
+                if (enemigo != null) enemigos.add(enemigo);
             }
             
-            System.out.println("Generados " + cantEnemigos + " enemigos aleatorios para nivel " + nivelActual);
+            System.out.println("Generados " + cantEnemigos + " enemigos aleatorios para nivel " + nivelActual + " Piso " + pisoActual);
         }
     }
     
     private void enviarDatosIniciales() {
-        StringBuilder datos = new StringBuilder("DATOS_BATALLA:" + nivelActual + ",");
+        // Formato: DATOS_BATALLA:PISO:NIVEL:Enemigo1,Vida1...
+        StringBuilder datos = new StringBuilder("DATOS_BATALLA:" + pisoActual + ":" + nivelActual + ",");
         
         for (int i = 0; i < enemigos.size(); i++) {
             Enemigo e = enemigos.get(i);
@@ -112,6 +145,22 @@ public class ControladorBatallaMultijugador {
         }).start();
 
         sincronizarEstadoJugadores();
+        enviarInfoJugadores();
+    }
+
+    private void enviarInfoJugadores() {
+        // INFO_JUGADORES:1:Clase:MaxVida:MaxFe:2:Clase:MaxVida:MaxFe
+        StringBuilder sb = new StringBuilder("INFO_JUGADORES");
+        
+        sb.append(":1:").append(jugador1.getClase().getNombre())
+          .append(":").append((int)jugador1.getVidaBase())
+          .append(":").append(jugador1.getFeMax());
+          
+        sb.append(":2:").append(jugador2.getClase().getNombre())
+          .append(":").append((int)jugador2.getVidaBase())
+          .append(":").append(jugador2.getFeMax());
+          
+        enviarATodos(sb.toString());
     }
     
     public void ejecutarTurnoJugadores(int enemigoJ1, int ataqueJ1, int enemigoJ2, int ataqueJ2) {
@@ -153,6 +202,17 @@ public class ControladorBatallaMultijugador {
         System.out.println("ControladorBatalla: ¡Todos los enemigos muertos! VICTORIA");
         return true;
     }
+
+    private boolean verificarDerrota() {
+        // DERROTA si AMBOS jugadores están muertos (vida <= 0)
+        // Ojo: Si permitimos revivir, esta lógica debería ser más compleja.
+        // Por ahora: Game Over si mueren todos.
+        if (jugador1.getVidaActual() <= 0 && jugador2.getVidaActual() <= 0) {
+            System.out.println("ControladorBatalla: ¡Ambos jugadores muertos! DERROTA");
+            return true;
+        }
+        return false;
+    }
     
     private void limpiarEnemigosMuertos() {
         int antesSize = enemigos.size();
@@ -190,6 +250,10 @@ public class ControladorBatallaMultijugador {
                 System.out.println("ControladorBatalla: Victoria detectada, enviando FIN_BATALLA");
                 servidor.enviarATodos("FIN_BATALLA:VICTORIA");
                 clientesListosParaSiguienteNivel = 0;
+            } else if (verificarDerrota()) {
+                System.out.println("ControladorBatalla: Derrota detectada, enviando FIN_BATALLA:DERROTA");
+                servidor.enviarATodos("FIN_BATALLA:DERROTA");
+                clientesListosParaSiguienteNivel = 0;
             } else {
                 // Limpiar selecciones para el próximo turno
                 for (InfoJugador j : servidor.getJugadores()) {
@@ -208,6 +272,14 @@ public class ControladorBatallaMultijugador {
         // Limpiar enemigos muertos ANTES de avanzar
         limpiarEnemigosMuertos();
         
+        // CORRECCION: Si estamos en piso 5 (Boss Final) y terminamos el nivel, ES VICTORIA.
+        // El Boss Final es nivel unico (aunque internamente sea 1).
+        if (pisoActual >= 5) {
+             System.out.println("ControladorBatalla: ¡VICTORIA FINAL! Completaron el Piso 5 (Boss Final)");
+             enviarATodos("VICTORIA_FINAL");
+             return;
+        }
+
         nivelActual++;
         System.out.println("ControladorBatalla: ===== AVANZANDO NIVEL =====");
         System.out.println("ControladorBatalla: Nivel anterior: " + (nivelActual - 1));
@@ -222,6 +294,10 @@ public class ControladorBatallaMultijugador {
                 enviarATodos("VICTORIA_FINAL");
                 return;
             }
+            
+            // RESETEAR JUGADORES (Fe, Estados) AL CAMBIAR DE PISO
+            resetearJugadoresCambioPiso(jugador1);
+            resetearJugadoresCambioPiso(jugador2);
             
             System.out.println("ControladorBatalla: Completado piso " + (pisoActual-1) + ", avanzando a piso " + pisoActual);
         }
@@ -415,4 +491,15 @@ public class ControladorBatallaMultijugador {
     public Jugador getJugador2() { return jugador2; }
     public int getNivelActual() { return nivelActual; }
     public int getPisoActual() { return pisoActual; }
+
+    private void resetearJugadoresCambioPiso(Jugador j) {
+        if (j == null) return;
+        // Restaurar Fe (Energia) al maximo (base)
+        j.setFeActual(j.getFeMax());
+        // Limpiar estados alterados (veneno, buff, etc)
+        j.aplicarEstadoAlterado(null);
+        // NO reseteamos vida (según pedido del usuario).
+        // NO reseteamos monedas (son acumulativas).
+        System.out.println("ControladorBatalla: Reseteados valores de piso para " + j.getNombre() + " (Fe: " + j.getFeActual() + ")");
+    }
 }

@@ -48,5 +48,9 @@ public abstract class Clase{
     public int getMonedasBase(){
         return monedasBase;
     }
+    
+    public String getNombre() {
+        return nombre;
+    }
 
 }
