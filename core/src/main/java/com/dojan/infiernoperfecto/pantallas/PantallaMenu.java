@@ -10,7 +10,7 @@ import com.dojan.infiernoperfecto.elementos.Texto;
 import com.dojan.infiernoperfecto.utiles.Config;
 import com.dojan.infiernoperfecto.utiles.ControlAudio;
 import com.dojan.infiernoperfecto.utiles.Recursos;
-import static com.dojan.infiernoperfecto.utiles.Render.app;
+import static com.dojan.infiernoperfecto.utiles.Render.app; //es una instancia de InfiernoPerfecto
 import static com.dojan.infiernoperfecto.utiles.Render.batch;
 
 import io.Entradas;
@@ -122,7 +122,7 @@ public class PantallaMenu implements Screen {
 
         if(entradas.isEnter() || entradas.isClick()){
             if(((opc==1)&&(entradas.isEnter())) || ((opc==1)&&(entradas.isClick())&&(mouseClick))){
-                // ✅ Iniciar servidor en lugar de ir a otra pantalla
+                // Iniciar servidor en lugar de ir a otra pantalla
                 app.iniciarServidor();
                 ControlAudio.pararMusica();
                 app.setScreen(new PantallaServidorActivo());

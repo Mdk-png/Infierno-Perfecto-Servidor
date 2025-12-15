@@ -5,8 +5,6 @@ import java.net.InetAddress;
 /**
  * Clase que representa la información de un jugador conectado al servidor.
  * Extiende DireccionRed agregando datos específicos del jugador para batalla multijugador.
- * 
- * Fase 2.1: Extensión de red para modo multijugador
  */
 public class InfoJugador {
     private DireccionRed direccion;
@@ -19,10 +17,9 @@ public class InfoJugador {
     private Integer ataqueSeleccionado = null;
     
     /**
-     * Constructor principal
-     * @param ip Dirección IP del cliente
-     * @param puerto Puerto del cliente
-     * @param numeroJugador Número asignado (1 o 2)
+     * ip = Dirección IP del cliente
+     * puerto = Puerto del cliente
+     * numeroJugador = Número asignado (1 o 2)
      */
     public InfoJugador(InetAddress ip, int puerto, int numeroJugador) {
         this.direccion = new DireccionRed(ip, puerto);
@@ -31,7 +28,7 @@ public class InfoJugador {
     
     /**
      * Verifica si el jugador ha completado su selección de turno
-     * @return true si seleccionó enemigo Y ataque
+     * return true si seleccionó enemigo Y ataque
      */
     public boolean tieneSeleccionCompleta() {
         return enemigoSeleccionado != null && ataqueSeleccionado != null;
@@ -45,10 +42,6 @@ public class InfoJugador {
         enemigoSeleccionado = null;
         ataqueSeleccionado = null;
     }
-    
-    // ============================================================
-    // GETTERS Y SETTERS
-    // ============================================================
     
     public DireccionRed getDireccion() {
         return direccion;

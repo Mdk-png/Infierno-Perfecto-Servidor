@@ -17,7 +17,7 @@ public class Batalla {
     private String logCombate = "";
     private final List<Integer> enemigosMuertosEsteturno = new ArrayList<>();
 
-    // Constructor existente (1 jugador) - NO MODIFICAR
+    // Constructor existente (1 jugador)
     public Batalla(Personaje jugador, List<Enemigo> enemigos){
         this.jugador = jugador;
         this.jugadores = null;  // null indica modo 1 jugador
@@ -36,7 +36,7 @@ public class Batalla {
     El primer turno (turno==0) es del jugador, los siguientes de los enemigos.
      */
     public boolean avanzarTurno(int opcE, int opcA) {
-        enemigosMuertosEsteturno.clear(); // ← NUEVO: Limpiar la lista al inicio del turno
+        enemigosMuertosEsteturno.clear();
 
         if (turno == 0) {
             turnoJugador(opcE, opcA);
@@ -110,16 +110,13 @@ public class Batalla {
      * En turno 0: ambos jugadores atacan simultáneamente.
      * En turnos 1+: cada enemigo ataca a un jugador aleatorio.
      *
-     * @param j1EnemigoIdx Índice del enemigo que ataca jugador 1
-     * @param j1AtaqueIdx Índice del ataque que usa jugador 1
-     * @param j2EnemigoIdx Índice del enemigo que ataca jugador 2
-     * @param j2AtaqueIdx Índice del ataque que usa jugador 2
-     * @return true si la batalla terminó, false si continúa
+     * j1EnemigoIdx Índice del enemigo que ataca jugador 1
+     * j1AtaqueIdx Índice del ataque que usa jugador 1
+     * j2EnemigoIdx Índice del enemigo que ataca jugador 2
+     * j2AtaqueIdx Índice del ataque que usa jugador 2
+     * return true si la batalla terminó, false si continúa
      */
-    public boolean avanzarTurnoMultijugador(
-        int j1EnemigoIdx, int j1AtaqueIdx,
-        int j2EnemigoIdx, int j2AtaqueIdx
-    ) {
+    public boolean avanzarTurnoMultijugador(int j1EnemigoIdx, int j1AtaqueIdx, int j2EnemigoIdx, int j2AtaqueIdx) {
         enemigosMuertosEsteturno.clear();
         logCombate = "";
 

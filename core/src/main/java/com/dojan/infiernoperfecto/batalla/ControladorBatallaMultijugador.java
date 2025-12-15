@@ -41,6 +41,7 @@ public class ControladorBatallaMultijugador {
         this.enemigos = new ArrayList<>();
     }
 
+    // crea la primer batalla, luego se utiliza iniciarNivelStandard para los siguientes niveles
     public void iniciarBatalla(Jugador j1, Jugador j2) {
         System.out.println("ControladorBatalla: Iniciando batalla multijugador...");
         System.out.println("ControladorBatalla: Piso " + pisoActual + ", Nivel " + nivelActual);
@@ -128,6 +129,7 @@ public class ControladorBatallaMultijugador {
         // Formato: DATOS_BATALLA:PISO:NIVEL:Enemigo1,Vida1...
         StringBuilder datos = new StringBuilder("DATOS_BATALLA:" + pisoActual + ":" + nivelActual + ",");
 
+        // enviar datos de los enemigos que encuentra en la ArrayList enemigos
         for (int i = 0; i < enemigos.size(); i++) {
             Enemigo e = enemigos.get(i);
             datos.append(e.getNombre()).append(",").append((int)e.getVidaActual());
@@ -136,7 +138,7 @@ public class ControladorBatallaMultijugador {
             }
         }
 
-        // FASE 5: Enviar múltiples veces por redundancia UDP (evitar pérdida de paquete crítico)
+        // Enviar múltiples veces por redundancia UDP (evitar pérdida de paquete crítico)
         final String mensajeDatos = datos.toString();
         new Thread(() -> {
             for (int i = 0; i < 5; i++) {
@@ -194,8 +196,6 @@ public class ControladorBatallaMultijugador {
             sincronizarEstado();
         }
 
-        // NO enviar TU_TURNO ni FIN_BATALLA aquí
-        // Esperar a que ambos jugadores confirmen el log
         System.out.println("ControladorBatalla: Esperando confirmación de log de ambos jugadores...");
     }
 
@@ -231,8 +231,9 @@ public class ControladorBatallaMultijugador {
         System.out.println("ControladorBatalla: Limpieza de enemigos: " + antesSize + " -> " + despuesSize);
     }
 
+    //viene aca desde HiloServidor cuando le llega que el cliente esta listo para el siguiente nivel
     public void clienteListoParaSiguienteNivel() {
-        clientesListosParaSiguienteNivel++;
+        clientesListosParaSiguienteNivel++; // Incrementar contador de clientes listos para siguiente nivel
         System.out.println("Cliente listo para siguiente nivel (" + clientesListosParaSiguienteNivel + "/2)");
 
         if (clientesListosParaSiguienteNivel >= 2) {
@@ -241,11 +242,14 @@ public class ControladorBatallaMultijugador {
     }
 
     public void clienteListoParaResultados() {
-        clientesListosResultados++;
+        clientesListosResultados++; // Incrementar contador de clientes listos para resultados
+        // Si ambos clientes están listos, continuar con resultados
         System.out.println("Cliente listo para continuar resultados (" + clientesListosResultados + "/2)");
 
     }
 
+    // una vez que se ejecutaron ambos turnos y los de los enemigos, se envia el log
+    // y si ambos jugadores confirman el log, se verifica la victoria y se avanza al siguiente nivel
     public void clienteConfirmoLog(InfoJugador jugador) {
         clientesConfirmaronLog++;
         System.out.println("ControladorBatalla: Cliente confirmó log (" + clientesConfirmaronLog + "/2)");
@@ -259,11 +263,12 @@ public class ControladorBatallaMultijugador {
                 System.out.println("ControladorBatalla: Victoria detectada, enviando FIN_BATALLA");
                 servidor.enviarATodos("FIN_BATALLA:VICTORIA"); // Avisar victoria
                 clientesListosParaSiguienteNivel = 0;
+                // cuando reciben esto los clientes envian clienteListoParaSiguienteNivel()
             } else if (verificarDerrota()) {
                 System.out.println("ControladorBatalla: Derrota detectada, enviando FIN_BATALLA:DERROTA");
                 servidor.enviarATodos("FIN_BATALLA:DERROTA"); // Avisar derrota
                 clientesListosParaSiguienteNivel = 0;
-            } else {
+            } else { //si no hay victoria ni derrota, se avanza al siguiente turno
                 // Limpiar selecciones para el próximo turno
                 for (InfoJugador j : servidor.getJugadores()) {
                     j.limpiarSelecciones();
@@ -271,7 +276,7 @@ public class ControladorBatallaMultijugador {
 
                 // Continuar con nuevo turno
                 System.out.println("ControladorBatalla: Batalla continúa, enviando TU_TURNO");
-                servidor.enviarATodos("TU_TURNO");
+                servidor.enviarATodos("TU_TURNO"); // enviar mensaje a todos los clientes
                 System.out.println("ControladorBatalla: Nuevo turno de jugadores");
             }
         }
@@ -281,7 +286,7 @@ public class ControladorBatallaMultijugador {
         // Limpiar enemigos muertos ANTES de avanzar
         limpiarEnemigosMuertos();
 
-        // CORRECCION: Si estamos en piso 5 (Boss Final) y terminamos el nivel, ES VICTORIA.
+        // Si estamos en piso 5 (Boss Final) y terminamos el nivel, ES VICTORIA.
         // El Boss Final es nivel unico (aunque internamente sea 1).
         if (pisoActual >= 5) {
              System.out.println("ControladorBatalla: ¡VICTORIA FINAL! Completaron el Piso 5 (Boss Final)");
@@ -321,8 +326,6 @@ public class ControladorBatallaMultijugador {
 
             // Resetear contadores para esperar salida de tienda
             clientesListosParaSiguienteNivel = 0;
-            // Usaremos clientesListosParaSiguienteNivel o una nueva variable para salir de tienda
-            // Mejor reutilizar la variable pero reseteandola
         } else {
             // Regenerar enemigos para niveles 1-3
             iniciarNivelStandard();
@@ -331,17 +334,18 @@ public class ControladorBatallaMultijugador {
         System.out.println("ControladorBatalla: ===== FIN AVANCE NIVEL =====");
     }
 
+    // Este es utilizado para iniciar un nivel standard (1-3) que no sea el primero
     private void iniciarNivelStandard() {
         regenerarEnemigos();
 
-        List<Jugador> jugadores = Arrays.asList(jugador1, jugador2);
-        batalla = new Batalla(jugadores, enemigos);
+        List<Jugador> jugadores = Arrays.asList(jugador1, jugador2); //actualizar jugadores
+        batalla = new Batalla(jugadores, enemigos); //actualizar batalla
 
-        enviarDatosIniciales();
-        enviarATodos("TU_TURNO");
+        enviarDatosIniciales(); //enviar datos iniciales
+        enviarATodos("TU_TURNO"); //enviar turno
 
         for (InfoJugador j : servidor.getJugadores()) {
-            j.limpiarSelecciones();
+            j.limpiarSelecciones(); //limpiar selecciones
         }
     }
 
@@ -351,33 +355,6 @@ public class ControladorBatallaMultijugador {
         System.out.println("ControladorBatalla: Jugador " + numJugador + " compra item de valor " + costo);
 
         if (jugador.getMonedasActual() >= costo) {
-            // La lógica de "comprar" ya se ejecutó en el cliente (visualmente),
-            // pero el servidor es la autoridad final.
-            // Falta saber QUÉ compró para sumar vida/fe.
-            // Por simplicidad del protocolo actual (solo enviamos precio),
-            // asumiremos que el cliente dice la verdad sobre el precio y
-            // NO sumaremos stats aquí si no sabemos qué es.
-            // PERO el usuario dijo: "el servidor aplique los mensajes del item al jugador"
-            // Necesitamos saber qué compró.
-            // Si el cliente envía solo costo, solo descontamos oro.
-            // ERROR: Si no sumamos vida aquí, al enviar ACTUALIZAR_JUGADOR, sobreescribiremos la vida del cliente con la vieja.
-            // SOLUCIÓN: El cliente debe enviar todo o el ID del item.
-            // Como PantallaTiendaMulti envía `COMPRAR_ITEM:PRECIO`, falta info.
-            // VOy a modificar PantallaTiendaMulti mentalmente: Ya envié precios genericos.
-            // Asumiré que el TIENDA recupera STATS genéricos si no cambio el protocolo.
-            // MEJOR: Descontar oro aquí. Y esperar que el cliente haya actualizado su vida localmente? NO, ACTUALIZAR_JUGADOR manda la vida del server.
-            // NECESITO cambiar el handler en HiloServidor para parsear más args o cambiar logica aqui.
-            // CAMBIO: Voy a asumir que el cliente envía: COMPRAR_ITEM:COSTO
-            // Y voy a asumir que cada compra recupera 20 HP por defecto para probar, O
-            // LEER Comentario usuario: "el cliente tendria q mandarle al servidor un mensaje con las compras... para q el servidor aplique... y tenga ese efecto de tiempo real".
-            // Voy a hacer que el servidor reste las monedas.
-            // Y para la vida/fe... TRAMPA: Confiar en el cliente por ahora no es opción si mando ACTUALIZAR_JUGADOR.
-            // Opción Rápida: Que el mensaje sea "COMPRAR_ITEM:COSTO:VIDA_EXTRA".
-            // Voy a modificar HiloServidor para soportar eso, y HiloCliente/Pantalla también si puedo.
-            // O mejor, modificaré este método para recibir esos parámetros.
-
-
-
             jugador.setMonedasActual(jugador.getMonedasActual() - costo);
 
             // Validar update
@@ -496,6 +473,7 @@ public class ControladorBatallaMultijugador {
         }
     }
 
+    // envia mensaje a todos los clientes usando el metodo enviarUnicast de HiloServidor 
     private void enviarATodos(String mensaje) {
         for (InfoJugador jugador : servidor.getJugadores()) {
             servidor.enviarUnicast(mensaje,
@@ -515,8 +493,6 @@ public class ControladorBatallaMultijugador {
         j.setFeActual(j.getFeMax());
         // Limpiar estados alterados (veneno, buff, etc)
         j.aplicarEstadoAlterado(null);
-        // NO reseteamos vida (según pedido del usuario).
-        // NO reseteamos monedas (son acumulativas).
         System.out.println("ControladorBatalla: Reseteados valores de piso para " + j.getNombre() + " (Fe: " + j.getFeActual() + ")");
     }
 }

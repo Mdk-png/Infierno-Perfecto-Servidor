@@ -16,10 +16,6 @@ public class ControladorBatallaLocal {
         this.servicioCombate = new ServicioCombate();
     }
 
-    /**
-     * Procesa un comando del jugador.
-     * Más adelante, esto enviará el comando al servidor en lugar de ejecutarlo local.
-     */
     public ResultadoCombate procesarComando(ComandoAtacar comando) {
         Enemigo objetivo = batalla.getEnemigos().get(comando.getEnemigoIndex());
         Personaje jugador = batalla.getJugador();

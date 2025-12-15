@@ -17,8 +17,7 @@ public class InfiernoPerfecto extends Game {
         Render.app = this;
         Render.batch = new SpriteBatch();
 
-        // ✅ CAMBIO: No iniciar el servidor automáticamente
-        // Se iniciará cuando el usuario presione "Iniciar Servidor" en el menú
+        // iniciará cuando el usuario presione "Iniciar Servidor" en el menú
         System.out.println("=================================");
         System.out.println("   SERVIDOR - INFIERNO PERFECTO  ");
         System.out.println("=================================");
@@ -30,31 +29,25 @@ public class InfiernoPerfecto extends Game {
     @Override
     public void render() {
         super.render();
-
-//        Gdx.gl.glClearColor(136f / 255f, 0f, 21f / 255f, 1f);
-//        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
     }
 
-    // ✅ NUEVO: Método para iniciar el servidor desde el menú
+    //  Al tocar el boton de iniciar servidor este agarra la app creada en render
+    //  (que es una instancia de InfiernoPerfecto) y llama al metodo iniciarServidor()
+    //  este crea un Hilo servidor que inicia el servidor mediante start()
     public void iniciarServidor() {
         if (hiloServidor == null || !hiloServidor.isAlive()) {
-            System.out.println("=================================");
-            System.out.println("Iniciando servidor en puerto 6666...");
-            System.out.println("=================================");
 
+            // Crea el hilo del servidor
             hiloServidor = new HiloServidor();
-            hiloServidor.start();
-
+            hiloServidor.start(); //start es un metodo nativo de Thread que inicia el hilo
 
             System.out.println("✓ Servidor iniciado correctamente.");
-            System.out.println("✓ Esperando conexiones de clientes...");
         } else {
             System.out.println("El servidor ya está en ejecución.");
         }
     }
 
-    // ✅ NUEVO: Método para verificar si el servidor está en ejecución
+    // Método para verificar si el servidor está en ejecución
     public boolean isServidorActivo() {
         return hiloServidor != null && hiloServidor.isAlive();
     }
@@ -65,7 +58,7 @@ public class InfiernoPerfecto extends Game {
 
     @Override
     public void dispose() {
-        // ✅ Detener servidor de red correctamente
+        // Detener servidor de red correctamente
         if (hiloServidor != null) {
             try {
                 hiloServidor.detener();

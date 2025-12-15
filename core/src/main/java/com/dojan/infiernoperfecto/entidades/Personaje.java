@@ -25,7 +25,7 @@ public abstract class Personaje {
     protected int monedasActual;
     private EstadoAlterado estadoAlterado;
 
-
+    // con monedas para los jugadores
     public Personaje(String nombre, int vida, int danio, int defensa, int monedas,List<Ataque> ataques) {
         this.nombre = nombre;
         this.vidaBase = vida;
@@ -35,12 +35,11 @@ public abstract class Personaje {
         this.monedasBase = monedas;
         this.monedasActual = monedas;
         this.ataques = ataques;
-        // si la clase está asignada más tarde (constructor de Jugador), la inicialización de fe
-        // se hará en el constructor correspondiente. Aquí dejamos fe en 0 por defecto.
         this.feBase = 0;
         this.feActual = 0;
     }
 
+    // sin monedas para los enemigos
     public Personaje(String nombre, int vida, int danio, int defensa, List<Ataque> ataques) {
         this.nombre = nombre;
         this.vidaBase = vida;
@@ -48,8 +47,6 @@ public abstract class Personaje {
         this.danioBase = danio;
         this.defensaBase = defensa;
         this.ataques = ataques;
-        // si la clase está asignada más tarde (constructor de Jugador), la inicialización de fe
-        // se hará en el constructor correspondiente. Aquí dejamos fe en 0 por defecto.
         this.feBase = 0;
         this.feActual = 0;
     }
